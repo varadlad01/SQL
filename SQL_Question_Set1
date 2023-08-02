@@ -696,3 +696,105 @@ or lower(substring(city,-1,1)) not in ('a','e','i','o','u');
 select distinct(city) from station 
 where lower(substring(city,1,1)) not in ('a','e','i','o','u') 
 and lower(substring(city,-1,1)) not in ('a','e','i','o','u');
+
+#Q.17 Write an SQL query that reports the products that were only sold in the first quarter of 2019. That is,
+#between 2019-01-01 and 2019-03-31 inclusive.
+#Return the result table in any order.
+create table product(
+    product_id int,
+    product_name varchar(30),
+    unit_price int,
+    PRIMARY key(product_id)
+);
+
+insert into product VALUES(1,'S8',1000);
+insert into product VALUES(2,'G4',800);
+insert into product VALUES(3,'iPhone',1400);
+
+create table sales(
+    seller_id int,
+    product_id int,
+    buyer_id int,
+    sale_date date,
+    quantity int,
+    price int,
+    Foreign Key (product_id) REFERENCES product(product_id)
+);
+
+insert into sales VALUES(1,1,1,'2019-01-21',2,2000);
+insert into sales VALUES(1,2,2,'2019-02-17',1,800);
+insert into sales VALUES(2,2,3,'2019-06-02',1,800);
+insert into sales VALUES(3,3,4,'2019-05-13',2,2800);
+
+select p.product_id,p.product_name from product p inner join sales s on p.product_id=s.product_id
+where s.sale_date between '2019-01-01' and '2019-03-31';
+
+#Q.18 Write an SQL query to find all the authors that viewed at least one of their own articles.
+#Return the result table sorted by id in ascending order.
+
+create table views(
+    article_id int,author_id int,
+    viewer_id int,view_date date
+);
+
+insert into views values(1,3,5,'2019-08-01');
+insert into views values(1,3,6,'2019-08-02');
+insert into views values(2,7,7,'2019-08-01');
+insert into views values(2,7,6,'2019-08-02');
+insert into views values(4,7,1,'2019-07-22');
+insert into views values(3,4,4,'2019-07-21');
+insert into views values(3,4,4,'2019-07-21');
+
+select distinct author_id id from views where author_id=viewer_id;
+
+#Q.19 If the customer's preferred delivery date is the same as the order date, then the order is called
+#immediately; otherwise, it is called scheduled.
+#Write an SQL query to find the percentage of immediate orders in the table, rounded to 2 decimal places.
+create table delivery(
+    delivery_id int,
+    customer_id int,
+    order_date date,
+    customer_pref_delivery_date date,
+    primary key (delivery_id)
+);
+
+insert into delivery values(1,1,'2019-08-01','2019-08-02');
+insert into delivery values(2,5,'2019-08-02','2019-08-02');
+insert into delivery values(3,1,'2019-08-11','2019-08-11');
+insert into delivery values(4,3,'2019-08-24','2019-08-26');
+insert into delivery values(5,4,'2019-08-21','2019-08-22');
+insert into delivery values(6,2,'2019-08-11','2019-08-13');
+
+select round(
+count(case When order_date=customer_pref_delivery_date then delivery_id end)
+/count(case When true then delivery_id end)*100,2) immediate_percentage
+from delivery;
+
+#Q20. Write an SQL query to find the ctr of each Ad. Round ctr to two decimal points.
+#Return the result table ordered by ctr in descending order and by ad_id in ascending order in case of a
+#tie.
+
+create table ads(
+ad_id int,
+user_id int,
+action enum('Clicked', 'Viewed', 'Ignored'),
+primary key (ad_id,user_id)
+);
+
+insert into ads values(1,1,'Clicked');
+insert into ads values(2,2,'Clicked');
+insert into ads values(3,3,'Viewed');
+insert into ads values(5,5,'Ignored');
+insert into ads values(1,7,'Ignored');
+insert into ads values(2,7,'Viewed');
+insert into ads values(3,5,'Clicked');
+insert into ads values(1,4,'Viewed');
+insert into ads values(2,11,'Viewed');
+insert into ads values(1,2,'Clicked');
+
+select ad_id,case when click_cnt + view_cnt = 0 then 0
+else round(click_cnt / (click_cnt + view_cnt) * 100,2) end as ctr
+from( select ad_id, 
+count(case when action='Clicked' then action end) click_cnt,
+count(case when action='Viewed' then action end) view_cnt
+from ads group by ad_id)tmp order by ctr desc,ad_id;
