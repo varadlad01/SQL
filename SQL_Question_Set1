@@ -1048,13 +1048,13 @@ insert into Orders VALUES
 (7,3,30,'2020-06-25',2),
 (9,3,30,'2020-05-08',3);
 
-select * from(select c.customer_id,c.name,case
+select * from(select c.customer_id,c.name,
+sum(case
 when month(order_date)=6 then
-sum(p.price*o.quantity) over(PARTITION BY 
-c.customer_id,month(order_date)) june_sum,
+p.price*o.quantity
 when month(order_date)=7 then
-sum(p.price*o.quantity) over(PARTITION BY 
-c.customer_id,month(order_date)) july_sum
+p.price*o.quantity end) over(PARTITION BY 
+c.customer_id,month(order_date)) tmp_sum
 from Customers c
 inner join Orders o on o.customer_id=c.customer_id
 inner join Product p on p.product_id=o.product_id
