@@ -798,3 +798,265 @@ from( select ad_id,
 count(case when action='Clicked' then action end) click_cnt,
 count(case when action='Viewed' then action end) view_cnt
 from ads group by ad_id)tmp order by ctr desc,ad_id;
+
+create database vdb;
+use vdb;
+
+#Q.21 Write an SQL query to find the team size of each of the employees.
+#Return result table in any order.
+
+create table employee(
+    employee_id int,
+    team_id int,
+    primary key (employee_id)
+);
+ insert into employee values(1,8),(2,8),(3,8),(4,7),(5,9),(6,9);
+ select employee_id,
+ count(*) over(PARTITION BY team_id)
+ from employee order by employee_id;
+
+#Q.22 Write an SQL query to find the type of weather in each country for November 2019.
+#The type of weather is:
+#● Cold if the average weather_state is less than or equal 15,
+#● Hot if the average weather_state is greater than or equal to 25, and
+#● Warm otherwise.
+#Return result table in any order.
+
+create table countries(
+    country_id int,
+    country_name varchar(30),
+    primary key(country_id)
+);
+
+create table weather(
+country_id int,
+weather_state int,
+day date,
+PRIMARY key(country_id,day),
+Foreign Key (country_id) REFERENCES countries(country_id)
+);
+
+INSERT into countries VALUES(2,'USA'),(3,'Australia'),
+(7,'Peru'),(5,'China'),(8,'Morocco'),(9,'Spain');
+
+INSERT INTO weather VALUES(2,15,'2019-11-01'),
+(2,12,'2019-10-28'),(2,12,'2019-10-27'),
+(3,-2,'2019-11-10'),(3,0,'2019-11-11'),
+(3,3,'2019-11-12'),(5,16,'2019-11-07')
+,(5,18,'2019-11-09'),(5,21,'2019-11-23')
+,(7,25,'2019-11-28'),(7,22,'2019-12-01')
+,(7,20,'2019-12-02'),(8,25,'2019-11-05')
+,(8,27,'2019-11-15'),(8,31,'2019-11-25')
+,(9,7,'2019-10-23'),(9,3,'2019-12-23');
+select distinct c.country_name,
+case when avg(w.weather_state) 
+OVER(PARTITION BY w.country_id) <= 15 then 'Cold'
+when avg(w.weather_state) 
+OVER(PARTITION BY w.country_id) >= 25 then 'Hot'
+else 'Warm' end as weather_type
+from countries c inner join weather w 
+on c.country_id=w.country_id
+where MONTH(w.day)=11 and year(w.day)=2019;
+
+#Q.23 Write an SQL query to find the average selling price for each product. average_price should be
+#rounded to 2 decimal places.
+#Return the result table in any order.
+
+Create table prices(
+product_id int,
+start_date date,
+end_date date,
+price int,
+primary key (product_id,start_date,end_date)
+);
+
+create table unitssold(
+product_id int,
+purchase_date date,
+units int,
+Foreign Key (product_id) REFERENCES prices(product_id)
+);
+
+insert into prices values
+(1,'2019-02-17','2019-02-28',5),
+(1,'2019-03-01','2019-03-22',20),
+(2,'2019-02-01','2019-02-20',15),
+(2,'2019-02-21','2019-03-31',30);
+
+insert into unitssold values
+(1,'2019-02-25',100),
+(1,'2019-03-01',15),
+(2,'2019-02-10',200),
+(2,'2019-03-22',30);
+
+select distinct p.product_id,
+round(sum(p.price*u.units)
+over(PARTITION BY p.product_id)/
+sum(u.units)over(PARTITION BY p.product_id),2)as average_price
+from prices p inner join unitssold u 
+on p.product_id=u.product_id
+where u.purchase_date BETWEEN p.start_date and p.end_date;
+
+#Q24. Write an SQL query to report the first login date for each player.
+#Return the result table in any order.
+
+create table activity(
+    player_id int,
+    device_id int,
+    event_date date,
+    games_played int,
+    primary key (player_id,event_date)
+);
+
+insert into activity values
+(1,2,'2016-03-01',5),
+(1,2,'2016-05-02',6),
+(2,3,'2017-06-25',1),
+(3,1,'2016-03-02',0),
+(3,4,'2018-07-03',5);
+
+select distinct player_id,
+FIRST_VALUE(event_date) OVER(PARTITION BY player_id order by event_date) as first_login
+from activity;
+
+#Q.25 Write an SQL query to report the device that is first logged in for each player.
+#Return the result table in any order.
+
+select distinct player_id,
+FIRST_VALUE(device_id) OVER(PARTITION BY player_id order by device_id) as device_id
+from activity;
+
+#Q.26 Write an SQL query to get the names of products that have at least 100 units ordered in February 2020
+#and their amount.Return result table in any order.
+
+Create table products(
+product_id int,
+product_name varchar(30),
+product_category varchar(30),
+primary key (product_id)
+);
+ Create table orders(
+    product_id int,
+    order_date date,
+    unit int,
+    foreign key(product_id) REFERENCES products(product_id)
+);
+insert into products values
+(1,'Leetcode Solutions','Book'),
+(2,'Jewels of Stringology','Book'),
+(3,'HP','Laptop'),
+(4,'Lenovo','Laptop'),
+(5,'Leetcode Kit','T-shirt');
+
+insert into orders values
+(1,'2020-02-05',60),
+(1,'2020-02-10',70),
+(2,'2020-01-18',30),
+(2,'2020-02-11',80),
+(3,'2020-02-17',2),
+(3,'2020-02-24',3),
+(4,'2020-03-01',20),
+(4,'2020-03-04',30),
+(4,'2020-03-04',60),
+(5,'2020-02-25',50),
+(5,'2020-02-27',50),
+(5,'2020-03-01',50);
+
+select * from(select distinct p.product_name,
+sum(o.unit) OVER(PARTITION BY o.product_id) unit
+from products p inner join orders o 
+on p.product_id=o.product_id
+where month(o.order_date)=2 and 
+year(o.order_date)=2020)tmp 
+where unit>=100;
+
+#Q.27 Write an SQL query to find the users who have valid emails.
+#A valid e-mail has a prefix name and a domain where:
+#● The prefix name is a string that may contain letters (upper or lower case), digits, underscore
+#'_', period '.', and/or dash '-'. The prefix name must start with a letter.
+#● The domain is '@leetcode.com'.Return the result table in any order.
+
+create table users(
+user_id int,
+name varchar(30),
+mail varchar(30),
+primary key(user_id)
+);
+
+insert into users values
+(1,'Winston','winston@leetcode.com'),
+(2,'Jonathan','jonathanisgreat'),
+(3,'Annabelle','bella-@leetcode.com'),
+(4,'Sally','sally.come@leetcode.com'),
+(5,'Marwan','quarz#2020@leetcode.com'),
+(6,'David','david69@gmail.com'),
+(7,'Shapiro','.shapo@leetcode.com');
+
+#took help from internet
+SELECT *
+FROM users
+WHERE REGEXP_LIKE
+(mail,'^[a-zA-Z][a-zA-Z0-9\_\.\-]*@leetcode.com');
+
+#Q.28 Write an SQL query to report the customer_id and customer_name of customers who have spent at
+#least $100 in each month of June and July 2020.Return the result table in any order.
+
+create table Customers(
+    customer_id int,
+    name varchar(30),
+    country varchar(30),
+    PRIMARY KEY(customer_id)
+);
+create table Product(
+product_id int,
+description varchar(30),
+price int,
+PRIMARY KEY(product_id)
+);
+
+create table Orders(
+order_id int,
+customer_id int,
+product_id int,
+order_date date,
+quantity int,
+PRIMARY KEY(order_id),
+constraint fk1 Foreign Key (customer_id) 
+REFERENCES Customers(customer_id),
+constraint fk2 Foreign Key fk2 (product_id) 
+REFERENCES Product(product_id)
+);
+
+insert into Customers values
+(1,'Winston','USA'),
+(2,'Jonathan','Peru'),
+(3,'Moustafa','Egypt');
+
+insert into Product VALUES
+(10,'LC Phone',300),
+(20,'LC T-Shirt',10),
+(30,'LC Book',45),
+(40,'LC Keychain',2);
+
+insert into Orders VALUES
+(1,1,10,'2020-06-10',1),
+(2,1,20,'2020-07-01',1),
+(3,1,30,'2020-07-08',2),
+(4,2,10,'2020-06-15',2),
+(5,2,40,'2020-07-01',10),
+(6,3,20,'2020-06-24',2),
+(7,3,30,'2020-06-25',2),
+(9,3,30,'2020-05-08',3);
+
+select * from(select c.customer_id,c.name,case
+when month(order_date)=6 then
+sum(p.price*o.quantity) over(PARTITION BY 
+c.customer_id,month(order_date)) june_sum,
+when month(order_date)=7 then
+sum(p.price*o.quantity) over(PARTITION BY 
+c.customer_id,month(order_date)) july_sum
+from Customers c
+inner join Orders o on o.customer_id=c.customer_id
+inner join Product p on p.product_id=o.product_id
+where year(order_date)=2020)d 
+order by customer_id;
